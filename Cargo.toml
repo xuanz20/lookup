@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "arithmetic", "logup",
+    "lookup",
+    "pcs",
+    "poly_iop",
+    "utils",
+]
