@@ -18,19 +18,6 @@ pub fn eq_extension<F: PrimeField>(t: &[F]) -> Vec<DenseMultilinearExtension<F>>
     result
 }
 
-/// Evaluate eq(t, X) at a point
-pub fn eq_eval<F: PrimeField>(x: &[F], y: &[F]) -> F {
-    if x.len() != y.len() {
-        panic!("x and y have different length");
-    }
-    let mut res = F::one();
-    for (&xi, &yi) in x.iter().zip(y.iter()) {
-        let xi_yi = xi * yi;
-        res *= xi_yi + xi_yi - xi - yi + F::one();
-    }
-    res
-}
-
 pub fn remove_dummy_variable<F: PrimeField>(poly: &[F], pad: usize) -> Vec<F> {
     if pad == 0 {
         return poly.to_vec();

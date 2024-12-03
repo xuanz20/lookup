@@ -20,3 +20,7 @@ default = [ "print-trace" ]
 print-trace = [ 
     "ark-std/print-trace" 
 ]
+[[bench]]
+name = "lookup-benches"
+path = "benches/bench.rs"
+harness = false

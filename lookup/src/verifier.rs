@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use arithmetic::{multilinear_poly::{evaluate_on_point, new_eq}, power};
+use arithmetic::{multilinear_poly::{eq_eval, evaluate_on_point, new_eq}, power};
 use ark_ec::pairing::Pairing;
 use ark_std::{Zero, One};
 use merlin::Transcript;
@@ -198,10 +198,9 @@ fn verify_d_and_q<E: Pairing>(
     transcript: &mut Transcript,
 ) {
     // verify R_j * r^{s(s+1)/2} = \pi (d_i * q_i + 1 - q_i)
-    let (prod, challenge, value) = GrandProdCheck::verify(num_vars, transcript, field_deque);
+    let (prod, point, value) = GrandProdCheck::verify(num_vars, transcript, field_deque);
     assert_eq!(rj * power(r, s * (s - 1) / 2), prod);
     // prove value = \sum_{i} eq(challenge, i) * (d_i * q_i + 1 - q_i)
-    let eq = new_eq(&challenge);
     let (challenge, value) = SumCheck::verify(value, 3, num_vars, transcript, field_deque);
     let open_d = field_deque.pop_front().unwrap().pop().unwrap();
     let proof = affine_deque.pop_front().unwrap();
@@ -213,5 +212,5 @@ fn verify_d_and_q<E: Pairing>(
     append_serializable_element(transcript, b"value", &open_q);
     append_serializable_element(transcript, b"open", &proof);
     assert!(PCS::<E>::verify(vk, &commit_q, &challenge, &proof, open_q));
-    assert_eq!(value, evaluate_on_point(&eq, &challenge) * (open_d * open_q + E::ScalarField::one() - open_q));
+    assert_eq!(value, eq_eval(&point, &challenge) * (open_d * open_q + E::ScalarField::one() - open_q));
 }

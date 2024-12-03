@@ -1,11 +1,12 @@
 use std::collections::{LinkedList, VecDeque};
+use arithmetic::multilinear_poly::eq_eval;
 use ark_ec::{pairing::Pairing, scalar_mul::fixed_base::FixedBase, AffineRepr, CurveGroup};
 use ark_ff::{PrimeField, Zero};
 use ark_poly::DenseMultilinearExtension;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{rand::Rng, UniformRand};
 use crate::StructuredReferenceString;
-use crate::utils::{eq_eval, eq_extension, remove_dummy_variable};
+use crate::utils::{eq_extension, remove_dummy_variable};
 
 // Evaluations over {0, 1}^n for G1 and G2
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]

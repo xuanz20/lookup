@@ -1,4 +1,4 @@
-use arithmetic::multilinear_poly::{evaluate_on_point, new_eq};
+use arithmetic::multilinear_poly::{eq_eval, evaluate_on_point};
 use ark_ec::pairing::Pairing;
 use ark_std::One;
 use merlin::Transcript;
@@ -57,10 +57,9 @@ impl Logup {
 
         // verify \sum_i eq(r', i) * f_i * (r + a_i) = 1
         let point: Vec<_> = (0..m.ilog2() as usize).map(|_| get_and_append_challenge::<E::ScalarField>(transcript, b"")).collect();
-        let eq = new_eq(&point);
         let (challenge, value) = SumCheck::verify(E::ScalarField::one(), 3, m.ilog2() as usize, transcript, &mut field_deque);
         let open_value = field_deque.pop_front().unwrap();
-        assert_eq!(value, evaluate_on_point(&eq, &challenge) * open_value[0] * (open_value[1] + r));
+        assert_eq!(value, eq_eval(&point, &challenge) * open_value[0] * (open_value[1] + r));
         let proof = affine_deque.pop_front().unwrap();
         append_serializable_element(transcript, b"open", &proof);
         assert!(PCS::<E>::verify(vk, &commit_f, &challenge, &proof, open_value[0]));
@@ -71,7 +70,6 @@ impl Logup {
 
         // verfiy \sum_i eq(r', i) * g_i * (r + t_i) = 1
         let point: Vec<_> = (0..n.ilog2() as usize).map(|_| get_and_append_challenge::<E::ScalarField>(transcript, b"")).collect();
-        let eq = new_eq(&point);
         let (challenge, value) = SumCheck::verify(E::ScalarField::one(), 3, n.ilog2() as usize, transcript, &mut field_deque);
         let proof = affine_deque.pop_front().unwrap();
         append_serializable_element(transcript, b"open", &proof);
@@ -79,7 +77,7 @@ impl Logup {
         append_serializable_element(transcript, b"value", &open_value);
         assert_eq!(
             value,
-            evaluate_on_point(&eq, &challenge) * open_value * (r + evaluate_on_point(t, &challenge)),
+            eq_eval(&point, &challenge) * open_value * (r + evaluate_on_point(t, &challenge)),
         );
         assert!(PCS::<E>::verify(vk, &commit_g, &challenge, &proof, open_value));
     }

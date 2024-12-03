@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use arithmetic::multilinear_poly::{evaluate_on_point, new_eq};
+use arithmetic::multilinear_poly::{eq_eval, new_eq};
 use ark_ff::PrimeField;
 use merlin::Transcript;
 use utils::{append_serializable_element, get_and_append_challenge};
@@ -62,9 +62,8 @@ impl ZeroCheck {
         assert_eq!(value, prod);
 
         // check eq(r, r')
-        let new_eq = new_eq(&challenges);
         let eq = evals.pop().unwrap();
-        assert_eq!(eq, evaluate_on_point(&new_eq, &new_challenges));
+        assert_eq!(eq, eq_eval(&challenges, &new_challenges));
 
         (new_challenges, evals)
     }
