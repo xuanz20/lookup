@@ -46,8 +46,8 @@ mod tests {
     type E = ark_bn254::Bn254;
     type F = <E as Pairing>::ScalarField;
 
-    const M: usize = 1 << 8;
-    const N: usize = 1 << 4;
+    const M: usize = 1 << 20;
+    const N: usize = 1 << 16;
 
     #[test]
     fn test_lookup() {
@@ -55,7 +55,7 @@ mod tests {
         let t: Vec<_> = (1..=N).into_iter().map(|x| F::from(x as u32)).collect();
         let a: Vec<_> = (1..=M).into_iter().map(|_| t.choose(&mut rng).unwrap().clone()).collect();
         let mut transcript = Transcript::new(b"Logup");
-        let ((pk, ck), commit) = Logup::process::<E>(8, &a); // srs for 20 variates is enough
+        let ((pk, ck), commit) = Logup::process::<E>(20, &a); // srs for 20 variates is enough
         let proof = Logup::prove::<E>(&a, &t, &pk, &mut transcript);
         let mut transcript = Transcript::new(b"Logup");
         Logup::verify(&a, &t, &commit, &ck, &proof, &mut transcript);

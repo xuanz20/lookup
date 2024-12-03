@@ -41,7 +41,7 @@ fn main() {
     //         bench_lookup_helper(m, n, &pk, &vk);
     //     }
     // }
-    bench_lookup_helper(20, 8, &pk, &vk);
+    bench_lookup_helper(28, 16, &pk, &vk);
 }
 
 fn read_srs() -> Result<MultilinearUniversalParams<E>, io::Error> {
