@@ -2,14 +2,13 @@ use std::collections::VecDeque;
 
 use ark_ec::pairing::Pairing;
 use ark_std::test_rng;
-use hyrax_kzg::HyraxKzgPCS;
+use pcs::hyrax_kzg::hyrax_kzg_1::HyraxKzgPCS1;
 use pcs::{
     multilinear_kzg::data_structures::{MultilinearProverParam, MultilinearVerifierParam}, PolynomialCommitmentScheme
 };
 
 mod prover;
 mod verifier;
-pub mod hyrax_kzg;
 
 pub struct Logup;
 
@@ -34,7 +33,7 @@ impl<E: Pairing> LogupProof<E> {
     }
 }
 
-type PCS<E> = HyraxKzgPCS<E>;
+type PCS<E> = HyraxKzgPCS1<E>;
 type ProverParam<E> = MultilinearProverParam<E>;
 type VerifierParam<E> = MultilinearVerifierParam<E>;
 

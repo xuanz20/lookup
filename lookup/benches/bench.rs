@@ -7,14 +7,15 @@ use ark_std::{rand::seq::SliceRandom, test_rng};
 use lookup::Lookup;
 use merlin::Transcript;
 use pcs::{
-    hyrax_kzg::HyraxKzgPCS,
+    hyrax_kzg::{hyrax_kzg_1::HyraxKzgPCS1, hyrax_kzg_2::HyraxKzgPCS2},
     multilinear_kzg::data_structures::{MultilinearUniversalParams, MultilinearProverParam, MultilinearVerifierParam},
     PolynomialCommitmentScheme
 };
 
 type E = ark_bn254::Bn254;
 type F = <E as Pairing>::ScalarField;
-type PCS<E> = HyraxKzgPCS<E>;
+type PCS1<E> = HyraxKzgPCS1<E>;
+type PCS2<E> = HyraxKzgPCS2<E>;
 type ProverParam<E> = MultilinearProverParam<E>;
 type VerifierParam<E> = MultilinearVerifierParam<E>;
 
@@ -29,19 +30,19 @@ fn main() {
             Ok(p) => p,
             Err(_e) => {
                 let srs =
-                    PCS::<E>::gen_srs(&mut rng, SUPPORTED_SIZE);
+                    PCS1::<E>::gen_srs(&mut rng, SUPPORTED_SIZE);
                 write_srs(&srs);
                 srs
             },
         }
     };
-    let (pk, vk) = PCS::<E>::trim(&srs);
+    let (pk, vk) = PCS1::<E>::trim(&srs);
     // for m in M {
     //     for n in N {
     //         bench_lookup_helper(m, n, &pk, &vk);
     //     }
     // }
-    bench_lookup_helper(28, 16, &pk, &vk);
+    bench_lookup_helper(20, 8, &pk, &vk);
 }
 
 fn read_srs() -> Result<MultilinearUniversalParams<E>, io::Error> {
@@ -70,7 +71,7 @@ fn bench_lookup_helper(
     let mut rng = test_rng();
     let t: Vec<_> = (1..=(1 << n)).into_iter().map(|x| F::from(x as u32)).collect();
     let a: Vec<_> = (1..=(1 << m)).into_iter().map(|_| t.choose(&mut rng).unwrap().clone()).collect();
-    let commit = PCS::<E>::commit(pk, &a);
+    let commit = PCS2::<E>::commit(pk, &a);
     //==========================================================
     // generate a proof
     let mut transcript = Transcript::new(b"Lookup");

@@ -4,14 +4,15 @@ use ark_ec::pairing::Pairing;
 use ark_std::{end_timer, start_timer, One, Zero};
 use merlin::Transcript;
 use pcs::{
-    hyrax_kzg::HyraxKzgPCS, multilinear_kzg::data_structures::MultilinearVerifierParam, PolynomialCommitmentScheme
+    hyrax_kzg::{hyrax_kzg_1::HyraxKzgPCS1, hyrax_kzg_2::HyraxKzgPCS2}, multilinear_kzg::data_structures::MultilinearVerifierParam, PolynomialCommitmentScheme
 };
 use poly_iop::{grand_prod_check::GrandProdCheck, perm_check::PermCheck, sum_check::SumCheck, zero_check::ZeroCheck};
 use utils::{append_serializable_element, get_and_append_challenge};
 
 use crate::{Lookup, LookupProof};
 
-type PCS<E> = HyraxKzgPCS<E>;
+type PCS1<E> = HyraxKzgPCS1<E>;
+type PCS2<E> = HyraxKzgPCS2<E>;
 type VerifierParam<E> = MultilinearVerifierParam<E>;
 
 impl Lookup {
@@ -47,7 +48,6 @@ impl Lookup {
         let mut q1_open: Vec<(Vec<E::ScalarField>, E::ScalarField)> = Vec::new();
         let mut q2_open: Vec<(Vec<E::ScalarField>, E::ScalarField)> = Vec::new();
 
-        let step = start_timer!(|| "verify u and q");
         // verify the validity of u and q:
         // 1. u is a permutation of t and 0
         // 2. q_i is 0 or 1
@@ -59,21 +59,16 @@ impl Lookup {
         f_mask.resize(len, E::ScalarField::zero());
         verify_u_and_q::<E>(&mut u1_open, &mut q1_open, &perm, &f_mask, &mut field_deque, transcript);
         verify_u_and_q::<E>(&mut u2_open, &mut q2_open, &perm, &f_mask, &mut field_deque, transcript);
-        end_timer!(step);
         
         let r = get_and_append_challenge::<E::ScalarField>(transcript, b"Internal round");
         
         // verify \pi (r - a_i) = \pi (r - t_i)^{e_i}
         // verify \pi (r - a_i)
-        let step = start_timer!(|| "grand prod check");
         let (y, challenges, value) = GrandProdCheck::verify(m.ilog2() as usize, transcript, &mut field_deque);
-        end_timer!(step);
-        let step = start_timer!(|| "open a");
         let open_value = r - value;
         let proof = affine_deque.pop_front().unwrap();
         append_serializable_element(transcript, b"open", &proof);
-        assert!(PCS::<E>::verify(vk, commit_a, &challenges, &proof, open_value));
-        end_timer!(step);
+        assert!(PCS2::<E>::verify(vk, commit_a, &challenges, &proof, open_value));
 
         // verify \pi (r - t_i)^{e_i} = r1 * r2^s
         let eval = field_deque.pop_front().unwrap();
@@ -91,17 +86,13 @@ impl Lookup {
         let mut d2_open: Vec<(Vec<E::ScalarField>, E::ScalarField)> = Vec::new();
 
         // verify the validity of d:
-        let step = start_timer!(|| "verify d");
         verify_d::<E>(&mut d1_open, &mut u1_open, len, r, &mut field_deque, transcript);
         verify_d::<E>(&mut d2_open, &mut u2_open, len, r, &mut field_deque, transcript);
-        end_timer!(step);
 
         
         // verify r{j} * r^{s(s+1)/2} = \pi (d{j}_i * q{j}_i + 1 - q{j}_i)
-        let step = start_timer!(|| "verify d and q");
         verify_d_and_q::<E>(&mut d1_open, &mut q1_open, num_vars, s, r1, r, &mut field_deque, transcript);
         verify_d_and_q::<E>(&mut d2_open, &mut q2_open, num_vars, s, r2, r, &mut field_deque, transcript);
-        end_timer!(step);
 
         batch_verify(&commit_u1, &u1_open, num_vars, vk, &mut field_deque, &mut affine_deque, transcript);
         batch_verify(&commit_u2, &u2_open, num_vars, vk, &mut field_deque, &mut affine_deque, transcript);
@@ -141,14 +132,10 @@ fn verify_u_and_q<E: Pairing>(
     // 4. verify u's and q's pad 0
     let (challenge, values) = ZeroCheck::verify(num_vars, transcript, field_deque);
     u_open.push((challenge.clone(), values[0]));
-    let step = start_timer!(|| "eval");
     assert_eq!(values[1], evaluate_on_point(&f_mask, &challenge));
-    end_timer!(step);
     let (challenge, values) = ZeroCheck::verify(num_vars, transcript, field_deque);
     q_open.push((challenge.clone(), values[0]));
-    let step = start_timer!(|| "eval");
     assert_eq!(values[1], evaluate_on_point(&f_mask, &challenge));
-    end_timer!(step);
 }
 
 fn verify_d<E: Pairing>(
@@ -264,5 +251,5 @@ fn batch_verify<E: Pairing> (
     });
     let proof = affine_deque.pop_front().unwrap();
     append_serializable_element(transcript, b"open", &proof);
-    assert!(PCS::<E>::verify(vk, commit, &challenge, &proof, value / eq_eval));
+    assert!(PCS1::<E>::verify(vk, commit, &challenge, &proof, value / eq_eval));
 }

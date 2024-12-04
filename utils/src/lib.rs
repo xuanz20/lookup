@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use ark_ff::PrimeField;
 use ark_serialize::CanonicalSerialize;
 use ark_std::rand::Rng;
@@ -29,4 +31,13 @@ pub fn get_and_append_challenge<F: PrimeField>(transcript: &mut Transcript, labe
 
 pub fn rand_eval<F: PrimeField, R: Rng>(num_vars: usize, rng: &mut R) -> Vec<F> {
     (0..(1 << num_vars)).map(|_| F::rand(rng)).collect()
+}
+
+pub fn get_size<E>(deque: &VecDeque<Vec<E>>) -> f64 {
+    let mut total_size: usize = 0;
+    for vec in deque {
+        total_size += size_of::<Vec<E>>();
+        total_size += vec.capacity() * size_of::<E>();
+    }
+    total_size as f64 / 1024.0
 }

@@ -5,18 +5,18 @@ use ark_ec::{
 use ark_std::{
     marker::PhantomData, rand::Rng,
 };
-use pcs::{
+use crate::{
     multilinear_kzg::{data_structures::{
         MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifierParam
     }, open_internal, verify_internal},
     utils::vector_to_matrix, PolynomialCommitmentScheme, StructuredReferenceString,
 };
 
-pub struct HyraxKzgPCS<E: Pairing> {
+pub struct HyraxKzgPCS1<E: Pairing> {
     phantom: PhantomData<E>,
 }
 
-impl<E: Pairing> PolynomialCommitmentScheme<E> for HyraxKzgPCS<E> {
+impl<E: Pairing> PolynomialCommitmentScheme<E> for HyraxKzgPCS1<E> {
     type SRS = MultilinearUniversalParams<E>;
     type ProverParam = MultilinearProverParam<E>;
     type VerifierParam = MultilinearVerifierParam<E>;
@@ -70,5 +70,39 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for HyraxKzgPCS<E> {
         let commitment = E::G1::msm_unchecked(&commitment, &new_eq).into_affine();
         let point = &point[l_prime..];
         verify_internal(verifier_param, &commitment, point, proof, value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ark_bls12_381::Bls12_381;
+    use ark_std::{test_rng, UniformRand};
+    use utils::rand_eval;
+
+    type E = Bls12_381;
+    type F = <E as Pairing>::ScalarField;
+
+    fn test_single_helper<R: Rng>(
+        srs: &MultilinearUniversalParams<E>,
+        eval: &Vec<F>,
+        rng: &mut R,
+    ) {
+        let num_vars = eval.len().ilog2();
+        let (ck, vk) = HyraxKzgPCS1::trim(srs);
+        let commit = HyraxKzgPCS1::commit(&ck, eval);
+        let point: Vec<_> = (0..num_vars).map(|_| F::rand(rng)).collect();
+        let (proof, value) = HyraxKzgPCS1::open(&ck, eval, &point);
+        assert!(HyraxKzgPCS1::verify(&vk, &commit, &point, &proof, value));
+        let value = F::rand(rng);
+        assert!(!HyraxKzgPCS1::verify(&vk, &commit, &point, &proof, value));
+    }
+
+    #[test]
+    fn test_single_commit() {
+        let mut rng = test_rng();
+        let srs  = HyraxKzgPCS1::<E>::gen_srs(&mut rng, 10);
+        let eval_1 = rand_eval(10, &mut rng);
+        test_single_helper(&srs, &eval_1, &mut rng);
     }
 }

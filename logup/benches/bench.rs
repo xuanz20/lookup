@@ -4,16 +4,17 @@ use std::{fs::{self, File}, io, path::Path, time::Instant};
 use ark_ec::pairing::Pairing;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Write};
 use ark_std::{rand::seq::SliceRandom, test_rng};
-use logup::{hyrax_kzg::HyraxKzgPCS, Logup};
+use logup::Logup;
 use merlin::Transcript;
 use pcs::{
+    hyrax_kzg::hyrax_kzg_1::HyraxKzgPCS1,
     multilinear_kzg::data_structures::{MultilinearUniversalParams, MultilinearProverParam, MultilinearVerifierParam},
     PolynomialCommitmentScheme
 };
 
 type E = ark_bn254::Bn254;
 type F = <E as Pairing>::ScalarField;
-type PCS<E> = HyraxKzgPCS<E>;
+type PCS<E> = HyraxKzgPCS1<E>;
 type ProverParam<E> = MultilinearProverParam<E>;
 type VerifierParam<E> = MultilinearVerifierParam<E>;
 

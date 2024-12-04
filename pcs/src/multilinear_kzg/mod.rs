@@ -184,7 +184,6 @@ mod tests {
         let commit = <E as Pairing>::G1::msm_unchecked(&vec![commit_1, commit_2], &[F::from(1), F::from(1)]).into_affine();
         assert_eq!(commit, commit_3);
 
-
         // let eval_2 = rand_eval(1, &mut rng);
         // test_single_helper(&srs, &eval_2, &mut rng);
     }

@@ -4,14 +4,15 @@ use ark_ec::pairing::Pairing;
 use ark_std::{One, Zero, start_timer, end_timer};
 use merlin::Transcript;
 use pcs::{
-    hyrax_kzg::HyraxKzgPCS, multilinear_kzg::data_structures::MultilinearProverParam, PolynomialCommitmentScheme
+    hyrax_kzg::{hyrax_kzg_1::HyraxKzgPCS1, hyrax_kzg_2::HyraxKzgPCS2}, multilinear_kzg::data_structures::MultilinearProverParam, PolynomialCommitmentScheme
 };
 use poly_iop::{grand_prod_check::GrandProdCheck, perm_check::PermCheck, sum_check::SumCheck, zero_check::ZeroCheck};
 use utils::{append_serializable_element, get_and_append_challenge};
 
 use crate::{Lookup, LookupProof};
 
-type PCS<E> = HyraxKzgPCS<E>;
+type PCS1<E> = HyraxKzgPCS1<E>;
+type PCS2<E> = HyraxKzgPCS2<E>;
 type ProverParam<E> = MultilinearProverParam<E>;
 
 impl Lookup {
@@ -21,7 +22,6 @@ impl Lookup {
         pk: &ProverParam<E>,
         transcript: &mut Transcript,
     ) -> LookupProof<E> {
-        let prover_timer = start_timer!(|| "prove");
         let m = a.len();
         let n = t.len();
         let s = ((m + 1) as f64).sqrt().ceil() as usize;
@@ -69,10 +69,10 @@ impl Lookup {
         q2.extend(q2_);
 
         // commit u1, u2, q1, q2
-        let commit_u1 = PCS::<E>::commit(pk, &u1);
-        let commit_u2 = PCS::<E>::commit(pk, &u2);
-        let commit_q1 = PCS::<E>::commit(pk, &q1);
-        let commit_q2 = PCS::<E>::commit(pk, &q2);
+        let commit_u1 = PCS1::<E>::commit(pk, &u1);
+        let commit_u2 = PCS1::<E>::commit(pk, &u2);
+        let commit_q1 = PCS1::<E>::commit(pk, &q1);
+        let commit_q2 = PCS1::<E>::commit(pk, &q2);
         append_serializable_element(transcript, b"commitnent", &commit_u1);
         append_serializable_element(transcript, b"commitnent", &commit_u2);
         append_serializable_element(transcript, b"commitnent", &commit_q1);
@@ -106,7 +106,7 @@ impl Lookup {
         let eval: Vec<_> = a.iter().map(|x| r - x).collect();
         let (proof, challenge, _) = GrandProdCheck::prove(eval, transcript);
         field_deque.extend(proof);
-        let (proof, _) = PCS::<E>::open(pk, &a, &challenge);
+        let (proof, _) = PCS2::<E>::open(pk, &a, &challenge);
         append_serializable_element(transcript, b"open", &proof);
         affine_deque.push_back(proof);
 
@@ -131,8 +131,8 @@ impl Lookup {
             d2[i] = _prod;
             _prod *= r - u2[i];
         }
-        let commit_d1 = PCS::<E>::commit(pk, &d1);
-        let commit_d2 = PCS::<E>::commit(pk, &d2);
+        let commit_d1 = PCS1::<E>::commit(pk, &d1);
+        let commit_d2 = PCS1::<E>::commit(pk, &d2);
         append_serializable_element(transcript, b"commitment", &commit_d1);
         append_serializable_element(transcript, b"commitment", &commit_d2);
         affine_deque.push_back(commit_d1);
@@ -156,7 +156,6 @@ impl Lookup {
         batch_open(&d2, &d2_open, pk, &mut field_deque, &mut affine_deque, transcript);
 
         // Finish prove!!!
-        end_timer!(prover_timer);
         LookupProof {
             affine_deque: affine_deque,
             field_deque: field_deque,
@@ -307,7 +306,7 @@ fn batch_open<E: Pairing> (
     }
     let (proof, challenge, _) = SumCheck::prove(vec![batch_eq, eval.clone()], |v| v[0] * v[1], transcript);
     field_deque.extend(proof);
-    let (proof, _) = PCS::<E>::open(pk, &eval, &challenge);
+    let (proof, _) = PCS1::<E>::open(pk, &eval, &challenge);
     append_serializable_element(transcript, b"open", &proof);
     affine_deque.push_back(proof);
 }
