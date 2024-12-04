@@ -2,18 +2,36 @@ use std::collections::VecDeque;
 
 use ark_ec::pairing::Pairing;
 use ark_std::test_rng;
+use hyrax_kzg::HyraxKzgPCS;
 use pcs::{
-    hyrax_kzg::HyraxKzgPCS, multilinear_kzg::data_structures::{MultilinearProverParam, MultilinearVerifierParam}, PolynomialCommitmentScheme
+    multilinear_kzg::data_structures::{MultilinearProverParam, MultilinearVerifierParam}, PolynomialCommitmentScheme
 };
 
 mod prover;
 mod verifier;
+pub mod hyrax_kzg;
 
 pub struct Logup;
 
 pub struct LogupProof<E: Pairing> {
     affine_deque: VecDeque<Vec<<E as Pairing>::G1Affine>>,
     field_deque: VecDeque<Vec<<E as Pairing>::ScalarField>>,
+}
+
+impl<E: Pairing> LogupProof<E> {
+    pub fn get_proof_size(&self) -> f64 {
+        let mut total_size: usize = 0;
+        total_size += size_of::<Self>();
+        for vec in &self.affine_deque {
+            total_size += size_of::<Vec<<E as Pairing>::G1Affine>>();
+            total_size += vec.capacity() * size_of::<<E as Pairing>::G1Affine>();
+        }
+        for vec in &self.field_deque {
+            total_size += size_of::<Vec<<E as Pairing>::ScalarField>>();
+            total_size += vec.capacity() * size_of::<<E as Pairing>::ScalarField>();
+        }
+        total_size as f64 / 1024.0
+    }
 }
 
 type PCS<E> = HyraxKzgPCS<E>;
@@ -47,10 +65,10 @@ mod tests {
     type F = <E as Pairing>::ScalarField;
 
     const M: usize = 1 << 20;
-    const N: usize = 1 << 16;
+    const N: usize = 1 << 8;
 
     #[test]
-    fn test_lookup() {
+    fn test_logup() {
         let mut rng = test_rng();
         let t: Vec<_> = (1..=N).into_iter().map(|x| F::from(x as u32)).collect();
         let a: Vec<_> = (1..=M).into_iter().map(|_| t.choose(&mut rng).unwrap().clone()).collect();

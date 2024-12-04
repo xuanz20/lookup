@@ -1,8 +1,8 @@
 use std::collections::{HashMap, VecDeque};
 
-use arithmetic::multilinear_poly::new_eq;
+use arithmetic::{batch_inverse, multilinear_poly::new_eq};
 use ark_ec::pairing::Pairing;
-use ark_std::{end_timer, start_timer, One, Zero};
+use ark_std::{end_timer, start_timer, Zero};
 use merlin::Transcript;
 use pcs::PolynomialCommitmentScheme;
 use poly_iop::sum_check::SumCheck;
@@ -34,19 +34,29 @@ impl Logup {
 
         let r = get_and_append_challenge::<E::ScalarField>(transcript, b"Internal round");
 
-        let f: Vec<_> = a.iter().map(|x| E::ScalarField::one() / (r + x)).collect();
-        let g: Vec<_> = t.iter().map(|x| E::ScalarField::one() / (r + x)).collect();
+        let step = start_timer!(|| "compute f");
+        // let f: Vec<_> = a.iter().map(|x| E::ScalarField::one() / (r + x)).collect();
+        let f = batch_inverse(&a.iter().map(|x| r + x).collect());
+        end_timer!(step);
+        // let g: Vec<_> = t.iter().map(|x| E::ScalarField::one() / (r + x)).collect();
+        let g = batch_inverse(&t.iter().map(|x| r + x).collect());
 
         // commit f
+        let step = start_timer!(|| "commit f");
         let commit_f = PCS::<E>::commit(pk, &f);
+        end_timer!(step);
         append_serializable_element(transcript, b"commitment", &commit_f);
         affine_deque.push_back(commit_f);
         // commit g
+        let step = start_timer!(|| "commit g");
         let commit_g = PCS::<E>::commit(pk, &g);
+        end_timer!(step);
         append_serializable_element(transcript, b"commitment", &commit_g);
         affine_deque.push_back(commit_g);
         // commit e
+        let step = start_timer!(|| "commit e");
         let commit_e = PCS::<E>::commit(pk, &e);
+        end_timer!(step);
         append_serializable_element(transcript, b"commitment", &commit_e);
         affine_deque.push_back(commit_e);
 
@@ -60,9 +70,13 @@ impl Logup {
         append_serializable_element(transcript, b"value", &vec![sum_1, sum_2]);
         field_deque.push_back(vec![sum_1, sum_2]);
         // sum-check on \sum_i f_i
+        let step = start_timer!(|| "sum-check f");
         let (proof, challenges, _) = SumCheck::prove(vec![f.clone()], |v| v[0], transcript);
+        end_timer!(step);
         field_deque.extend(proof);
+        let step = start_timer!(|| "open f");
         let (proof, _) = PCS::<E>::open(pk, &f, &challenges);
+        end_timer!(step);
         append_serializable_element(transcript, b"open", &proof);
         affine_deque.push_back(proof);
         // sum-check on \sum_i g_i * e_i
@@ -80,12 +94,18 @@ impl Logup {
         // prove \sum_i eq(r', i) * f_i * (r + a_i) = 1
         let point: Vec<_> = (0..m.ilog2() as usize).map(|_| get_and_append_challenge::<E::ScalarField>(transcript, b"")).collect();
         let eq = new_eq(&point);
+        let step = start_timer!(|| "sum-check eq(r', i) * f_i * (r + a_i)");
         let (proof, challenge, _) = SumCheck::prove(vec![eq, f.clone(), a.iter().map(|x| r+x).collect()], |v| v[0] * v[1] * v[2], transcript);
+        end_timer!(step);
         field_deque.extend(proof);
+        let step = start_timer!(|| "open f");
         let (proof, open_f) = PCS::<E>::open(pk, &f, &challenge);
+        end_timer!(step);
         append_serializable_element(transcript, b"open", &proof);
         affine_deque.push_back(proof);
+        let step = start_timer!(|| "open a");
         let (proof, open_a) = PCS::<E>::open(pk, &a, &challenge);
+        end_timer!(step);
         append_serializable_element(transcript, b"open", &proof);
         affine_deque.push_back(proof);
         append_serializable_element(transcript, b"value", &vec![open_f, open_a]);

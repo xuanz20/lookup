@@ -5,7 +5,7 @@ use std::fmt::Debug;
 
 pub mod multilinear_kzg;
 pub mod hyrax_kzg;
-mod utils;
+pub mod utils;
 
 pub trait PolynomialCommitmentScheme<E: Pairing> {
     type SRS: Clone + Debug;
