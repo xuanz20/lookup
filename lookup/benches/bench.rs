@@ -20,7 +20,7 @@ type ProverParam<E> = MultilinearProverParam<E>;
 type VerifierParam<E> = MultilinearVerifierParam<E>;
 
 const SUPPORTED_SIZE: usize = 20;
-const M: [usize; 3] = [20, 24, 28];
+const M: [usize; 5] = [20, 22, 24, 26, 28];
 const N: [usize; 2] = [8, 16];
 
 fn main() {
@@ -37,12 +37,11 @@ fn main() {
         }
     };
     let (pk, vk) = PCS1::<E>::trim(&srs);
-    // for m in M {
-    //     for n in N {
-    //         bench_lookup_helper(m, n, &pk, &vk);
-    //     }
-    // }
-    bench_lookup_helper(20, 8, &pk, &vk);
+    for m in M {
+        for n in N {
+            bench_lookup_helper(m, n, &pk, &vk);
+        }
+    }
 }
 
 fn read_srs() -> Result<MultilinearUniversalParams<E>, io::Error> {
